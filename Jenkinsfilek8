@@ -10,7 +10,7 @@ pipeline {
         SCANNER_HOME = tool 'sonar-scanner'
         DOCKER_IMAGE = 'rajesh1808/bms:latest'
         EKS_CLUSTER_NAME = 'my-demo-eks'
-        AWS_REGION = 'ap-north-east-3'
+        AWS_REGION = 'ap-northeast-3' // Correct region
     }
 
     stages {
@@ -81,25 +81,27 @@ pipeline {
 
         stage('Deploy to EKS Cluster') {
             steps {
-                script {
-                    sh '''
-                    echo "Verifying AWS credentials..."
-                    aws sts get-caller-identity
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds']]) {
+                    script {
+                        sh '''
+                        echo "Verifying AWS credentials..."
+                        aws sts get-caller-identity
 
-                    echo "Configuring kubectl for EKS cluster..."
-                    aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
+                        echo "Configuring kubectl for EKS cluster..."
+                        aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
 
-                    echo "Verifying kubeconfig..."
-                    kubectl config view
+                        echo "Verifying kubeconfig..."
+                        kubectl config view
 
-                    echo "Deploying application to EKS..."
-                    kubectl apply -f deployment.yml
-                    kubectl apply -f service.yml
+                        echo "Deploying application to EKS..."
+                        kubectl apply -f deployment.yml
+                        kubectl apply -f service.yml
 
-                    echo "Verifying deployment..."
-                    kubectl get pods
-                    kubectl get svc
-                    '''
+                        echo "Verifying deployment..."
+                        kubectl get pods
+                        kubectl get svc
+                        '''
+                    }
                 }
             }
         }
